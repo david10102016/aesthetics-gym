@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reportes — GYM AESTHETICS FITNESS</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="js/styles.css">
+<style>
+  .report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+
+  .report-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .report-card:hover { border-color: var(--border2); }
+
+  .report-card-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 16px;
+  }
+
+  .report-card-value {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 52px;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .report-card-sub {
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  .report-card-bg {
+    position: absolute;
+    right: -20px; bottom: -20px;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 100px;
+    color: rgba(212,245,60,0.04);
+    letter-spacing: -0.05em;
+    pointer-events: none;
+    line-height: 1;
+  }
+
+  .plan-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .plan-bar-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text2);
+    width: 90px;
+    flex-shrink: 0;
+  }
+
+  .plan-bar-track {
+    flex: 1;
+    height: 6px;
+    background: var(--bg4);
+    overflow: hidden;
+  }
+
+  .plan-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.8s ease;
+  }
+
+  .plan-bar-count {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 18px;
+    color: var(--text2);
+    width: 30px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .plan-bar-amount {
+    font-size: 12px;
+    color: var(--text3);
+    width: 80px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .month-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .month-row:last-child { border-bottom: none; }
+
+  .month-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text2);
+  }
+
+  .month-amount {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 22px;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+  }
+
+  .month-count {
+    font-size: 12px;
+    color: var(--text3);
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+
+<div id="loading-screen" class="loading-screen">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Cargando reportes...</div>
+</div>
+
+<div class="app-layout" id="app" style="display:none">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-sq">GA</div>
+      <div class="logo-info">
+        <div class="logo-name">Gym Aesthetics</div>
+        <div class="logo-sub">Fitness</div>
+      </div>
+    </div>
+    <nav class="nav-section">
+      <div class="nav-label">Principal</div>
+      <a href="dashboard.html" class="nav-link"><span class="nav-icon">◈</span><span>Dashboard</span></a>
+      <a href="members.html" class="nav-link"><span class="nav-icon">◉</span><span>Socios</span></a>
+      <a href="payments.html" class="nav-link"><span class="nav-icon">◎</span><span>Pagos</span></a>
+      <div class="nav-label owner-only">Administración</div>
+      <a href="reports.html" class="nav-link owner-only active"><span class="nav-icon">▦</span><span>Reportes</span></a>
+      <a href="settings.html" class="nav-link owner-only"><span class="nav-icon">◧</span><span>Configuración</span></a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-card">
+        <div class="user-avatar" id="user-avatar">??</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name">...</div>
+          <div class="user-role-badge" id="user-role">...</div>
+        </div>
+        <button class="btn-logout" onclick="logout()" title="Cerrar sesión">⏻</button>
+      </div>
+    </div>
+  </aside>
+
+  <header class="app-header">
+    <div class="page-title">REPORTES FINANCIEROS</div>
+    <div class="header-actions">
+      <select id="filter-year" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'Barlow',sans-serif;font-size:13px;padding:10px 12px;outline:none">
+      </select>
+    </div>
+  </header>
+
+  <main class="app-main">
+
+    <!-- KPI Cards -->
+    <div class="report-grid">
+      <div class="report-card">
+        <div class="report-card-label">Ingresos este mes</div>
+        <div class="report-card-value" id="r-month-income">—</div>
+        <div class="report-card-sub" id="r-month-sub">Bs totales</div>
+        <div class="report-card-bg" id="r-month-bg">Bs</div>
+      </div>
+      <div class="report-card">
+        <div class="report-card-label">Ingresos este año</div>
+        <div class="report-card-value" id="r-year-income">—</div>
+        <div class="report-card-sub">Bs acumulado</div>
+        <div class="report-card-bg">AÑO</div>
+      </div>
+      <div class="report-card">
+        <div class="report-card-label">Pagos registrados</div>
+        <div class="report-card-value" id="r-payments-count">—</div>
+        <div class="report-card-sub">total del año</div>
+        <div class="report-card-bg">PAG</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+      <!-- Por plan -->
+      <div class="card">
+        <div class="card-title">Ingresos por plan — este mes</div>
+        <div id="plan-breakdown">
+          <div style="color:var(--text3);font-size:13px">Cargando...</div>
+        </div>
+      </div>
+
+      <!-- Por método -->
+      <div class="card">
+        <div class="card-title">Método de pago — este mes</div>
+        <div id="method-breakdown">
+          <div style="color:var(--text3);font-size:13px">Cargando...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Monthly history -->
+    <div class="card" style="margin-top:20px">
+      <div class="card-title">Ingresos mensuales</div>
+      <div id="monthly-history">
+        <div style="color:var(--text3);font-size:13px">Cargando...</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+<script>
+(async () => {
+  const session = await requireAuth();
+  if (!session) return;
+  const profile = await requireOwner();
+  if (!profile) return;
+  await setupNav();
+
+  const name = document.getElementById('user-name').textContent;
+  const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+  document.getElementById('user-avatar').textContent = initials;
+
+  // Year filter
+  const yearSel = document.getElementById('filter-year');
+  const now = new Date();
+  for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) {
+    yearSel.innerHTML += `<option value="${y}" ${y === now.getFullYear() ? 'selected' : ''}>${y}</option>`;
+  }
+
+  yearSel.addEventListener('change', () => loadReports(parseInt(yearSel.value)));
+
+  await loadReports(now.getFullYear());
+
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'grid';
+})();
+
+async function loadReports(year) {
+  const settings = await getSettings();
+  const currency = settings?.currency || 'Bs';
+  const now = new Date();
+  const thisMonth = now.getMonth() + 1;
+
+  const firstOfYear = `${year}-01-01`;
+  const lastOfYear = `${year}-12-31`;
+  const firstOfMonth = `${year}-${String(thisMonth).padStart(2,'0')}-01`;
+  const lastOfMonth = new Date(year, thisMonth, 0).toISOString().split('T')[0];
+
+  const { data: allPayments } = await supabaseClient
+    .from('payments')
+    .select('amount, payment_method, payment_date, plans(name)')
+    .gte('payment_date', firstOfYear)
+    .lte('payment_date', lastOfYear)
+    .order('payment_date');
+
+  const payments = allPayments || [];
+
+  const yearTotal = payments.reduce((s, p) => s + parseFloat(p.amount), 0);
+  const monthPayments = payments.filter(p => p.payment_date >= firstOfMonth && p.payment_date <= lastOfMonth);
+  const monthTotal = monthPayments.reduce((s, p) => s + parseFloat(p.amount), 0);
+
+  document.getElementById('r-month-income').textContent = monthTotal.toFixed(0);
+  document.getElementById('r-month-sub').textContent = `${currency} totales este mes`;
+  document.getElementById('r-month-bg').textContent = currency;
+  document.getElementById('r-year-income').textContent = yearTotal.toFixed(0);
+  document.getElementById('r-payments-count').textContent = payments.length;
+
+  // Plan breakdown
+  const planTotals = {};
+  monthPayments.forEach(p => {
+    const name = p.plans?.name || 'Otro';
+    if (!planTotals[name]) planTotals[name] = { count: 0, total: 0 };
+    planTotals[name].count++;
+    planTotals[name].total += parseFloat(p.amount);
+  });
+
+  const maxPlan = Math.max(...Object.values(planTotals).map(v => v.total), 1);
+  const planHtml = Object.entries(planTotals).length === 0
+    ? '<div style="color:var(--text3);font-size:12px">Sin datos este mes</div>'
+    : Object.entries(planTotals).map(([name, v]) => `
+      <div class="plan-bar">
+        <div class="plan-bar-label">${name}</div>
+        <div class="plan-bar-track">
+          <div class="plan-bar-fill" style="width:${Math.round(v.total/maxPlan*100)}%"></div>
+        </div>
+        <div class="plan-bar-count">${v.count}</div>
+        <div class="plan-bar-amount">${currency} ${v.total.toFixed(0)}</div>
+      </div>
+    `).join('');
+  document.getElementById('plan-breakdown').innerHTML = planHtml;
+
+  // Method breakdown
+  const cash = monthPayments.filter(p => p.payment_method === 'cash');
+  const qr = monthPayments.filter(p => p.payment_method === 'qr_transfer');
+  const cashTotal = cash.reduce((s,p) => s + parseFloat(p.amount), 0);
+  const qrTotal = qr.reduce((s,p) => s + parseFloat(p.amount), 0);
+  const methodMax = Math.max(cashTotal, qrTotal, 1);
+
+  document.getElementById('method-breakdown').innerHTML = `
+    <div class="plan-bar">
+      <div class="plan-bar-label">Efectivo</div>
+      <div class="plan-bar-track">
+        <div class="plan-bar-fill" style="width:${Math.round(cashTotal/methodMax*100)}%;background:var(--green)"></div>
+      </div>
+      <div class="plan-bar-count">${cash.length}</div>
+      <div class="plan-bar-amount">${currency} ${cashTotal.toFixed(0)}</div>
+    </div>
+    <div class="plan-bar">
+      <div class="plan-bar-label">QR/Transf.</div>
+      <div class="plan-bar-track">
+        <div class="plan-bar-fill" style="width:${Math.round(qrTotal/methodMax*100)}%;background:var(--accent)"></div>
+      </div>
+      <div class="plan-bar-count">${qr.length}</div>
+      <div class="plan-bar-amount">${currency} ${qrTotal.toFixed(0)}</div>
+    </div>
+  `;
+
+  // Monthly history
+  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const monthlyData = {};
+  payments.forEach(p => {
+    const m = parseInt(p.payment_date.split('-')[1]) - 1;
+    if (!monthlyData[m]) monthlyData[m] = { total: 0, count: 0 };
+    monthlyData[m].total += parseFloat(p.amount);
+    monthlyData[m].count++;
+  });
+
+  const histHtml = Object.keys(monthlyData).length === 0
+    ? '<div style="color:var(--text3);font-size:12px">Sin pagos en este año</div>'
+    : Object.entries(monthlyData).reverse().map(([m, v]) => `
+      <div class="month-row">
+        <div class="month-name">${months[parseInt(m)]}</div>
+        <div style="text-align:right">
+          <div class="month-amount">${currency} ${v.total.toFixed(0)}</div>
+          <div class="month-count">${v.count} pago(s)</div>
+        </div>
+      </div>
+    `).join('');
+
+  document.getElementById('monthly-history').innerHTML = histHtml;
+}
+</script>
+</body>
+</html>

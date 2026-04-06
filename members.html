@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Socios — GYM AESTHETICS FITNESS</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="js/styles.css">
+</head>
+<body>
+
+<div id="loading-screen" class="loading-screen">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Cargando socios...</div>
+</div>
+
+<div class="app-layout" id="app" style="display:none">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-sq">GA</div>
+      <div class="logo-info">
+        <div class="logo-name">Gym Aesthetics</div>
+        <div class="logo-sub">Fitness</div>
+      </div>
+    </div>
+    <nav class="nav-section">
+      <div class="nav-label">Principal</div>
+      <a href="dashboard.html" class="nav-link">
+        <span class="nav-icon">◈</span><span>Dashboard</span>
+      </a>
+      <a href="members.html" class="nav-link active">
+        <span class="nav-icon">◉</span><span>Socios</span>
+      </a>
+      <a href="payments.html" class="nav-link">
+        <span class="nav-icon">◎</span><span>Pagos</span>
+      </a>
+      <div class="nav-label owner-only">Administración</div>
+      <a href="reports.html" class="nav-link owner-only">
+        <span class="nav-icon">▦</span><span>Reportes</span>
+      </a>
+      <a href="settings.html" class="nav-link owner-only">
+        <span class="nav-icon">◧</span><span>Configuración</span>
+      </a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-card">
+        <div class="user-avatar" id="user-avatar">??</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name">...</div>
+          <div class="user-role-badge" id="user-role">...</div>
+        </div>
+        <button class="btn-logout" onclick="logout()" title="Cerrar sesión">⏻</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="page-title">SOCIOS</div>
+    <div class="header-actions">
+      <div class="search-bar" style="width:240px">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="search-input" placeholder="Buscar socio...">
+      </div>
+      <button class="btn btn-accent" id="btn-new-member">+ Nuevo Socio</button>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="app-main">
+    <div class="card">
+      <div class="table-wrap">
+        <table id="members-table">
+          <thead>
+            <tr>
+              <th>Socio</th>
+              <th>Teléfono</th>
+              <th>Plan</th>
+              <th>Vencimiento</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="members-tbody">
+            <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text3)">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL NEW/EDIT MEMBER -->
+<div id="member-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">NUEVO SOCIO</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="member-id">
+      <div class="form-grid">
+        <div class="field">
+          <label>Nombre completo *</label>
+          <input type="text" id="field-name" placeholder="Nombre y apellido">
+        </div>
+        <div class="field">
+          <label>Teléfono</label>
+          <input type="text" id="field-phone" placeholder="Ej: 70000000">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="field-email" placeholder="correo@ejemplo.com">
+        </div>
+        <div class="field">
+          <label>Plan *</label>
+          <select id="field-plan">
+            <option value="">Seleccionar plan...</option>
+          </select>
+        </div>
+        <div class="field" style="grid-column: 1/-1">
+          <label>Notas</label>
+          <input type="text" id="field-notes" placeholder="Observaciones opcionales">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-accent" id="btn-save-member">Guardar Socio</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+<script>
+let allMembers = [];
+let plans = [];
+let userProfile = null;
+
+(async () => {
+  const session = await requireAuth();
+  if (!session) return;
+  await setupNav();
+  userProfile = await getProfile();
+
+  const name = document.getElementById('user-name').textContent;
+  const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+  document.getElementById('user-avatar').textContent = initials;
+
+  plans = await getPlans();
+  fillPlanSelect();
+  await loadMembers();
+
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'grid';
+
+  document.getElementById('btn-new-member').addEventListener('click', openNewMember);
+  document.getElementById('btn-save-member').addEventListener('click', saveMember);
+  document.getElementById('search-input').addEventListener('input', filterMembers);
+})();
+
+function fillPlanSelect() {
+  const sel = document.getElementById('field-plan');
+  sel.innerHTML = '<option value="">Seleccionar plan...</option>';
+  plans.forEach(p => {
+    sel.innerHTML += `<option value="${p.id}">${p.name} — ${p.price} Bs</option>`;
+  });
+}
+
+async function loadMembers() {
+  await supabaseClient.rpc('update_subscription_status');
+  const { data } = await supabaseClient
+    .from('members_status')
+    .select('*')
+    .order('full_name');
+  allMembers = data || [];
+  renderTable(allMembers);
+}
+
+function renderTable(members) {
+  const tbody = document.getElementById('members-tbody');
+  if (members.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6">
+      <div class="empty-state">
+        <div class="empty-state-icon">◉</div>
+        <div class="empty-state-title">Sin socios registrados</div>
+        <div class="empty-state-sub">Agrega el primer socio con el botón "Nuevo Socio"</div>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = members.filter(m => m.is_active).map(m => {
+    const days = m.days_remaining;
+    let badgeHtml = '<span class="badge red"><span class="badge-dot"></span>Sin membresía</span>';
+    if (m.status === 'active') {
+      badgeHtml = `<span class="badge green"><span class="badge-dot"></span>Vigente</span>`;
+    } else if (m.status === 'expiring_soon') {
+      badgeHtml = `<span class="badge yellow"><span class="badge-dot"></span>Por vencer</span>`;
+    } else if (m.status === 'expired') {
+      badgeHtml = `<span class="badge red"><span class="badge-dot"></span>Vencido</span>`;
+    }
+
+    const deleteBtn = userProfile?.role === 'owner'
+      ? `<button class="btn btn-danger btn-sm" onclick="deleteMember('${m.id}', '${m.full_name}')">Eliminar</button>`
+      : '';
+
+    return `
+      <tr>
+        <td>
+          <div class="td-name">${m.full_name}</div>
+          <div style="font-size:11px;color:var(--text3)">${m.email || '—'}</div>
+        </td>
+        <td>${m.phone || '—'}</td>
+        <td><span class="td-plan">${m.plan_name || '—'}</span></td>
+        <td>${formatDate(m.end_date)}</td>
+        <td>${badgeHtml}</td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="openEditMember('${m.id}')">Editar</button>
+          <button class="btn btn-ghost btn-sm" onclick="openPayment('${m.id}', '${m.full_name}')">+ Pago</button>
+          ${deleteBtn}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterMembers() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const filtered = allMembers.filter(m =>
+    m.full_name.toLowerCase().includes(q) ||
+    (m.email || '').toLowerCase().includes(q) ||
+    (m.phone || '').includes(q)
+  );
+  renderTable(filtered);
+}
+
+function openNewMember() {
+  document.getElementById('modal-title').textContent = 'NUEVO SOCIO';
+  document.getElementById('member-id').value = '';
+  document.getElementById('field-name').value = '';
+  document.getElementById('field-phone').value = '';
+  document.getElementById('field-email').value = '';
+  document.getElementById('field-plan').value = '';
+  document.getElementById('field-notes').value = '';
+  document.getElementById('member-modal').style.display = 'flex';
+}
+
+function openEditMember(id) {
+  const m = allMembers.find(x => x.id === id);
+  if (!m) return;
+  document.getElementById('modal-title').textContent = 'EDITAR SOCIO';
+  document.getElementById('member-id').value = m.id;
+  document.getElementById('field-name').value = m.full_name;
+  document.getElementById('field-phone').value = m.phone || '';
+  document.getElementById('field-email').value = m.email || '';
+  document.getElementById('field-plan').value = m.plan_id || '';
+  document.getElementById('field-notes').value = m.notes || '';
+  document.getElementById('member-modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('member-modal').style.display = 'none';
+}
+
+async function saveMember() {
+  const id = document.getElementById('member-id').value;
+  const name = document.getElementById('field-name').value.trim();
+  const phone = document.getElementById('field-phone').value.trim();
+  const email = document.getElementById('field-email').value.trim();
+  const planId = document.getElementById('field-plan').value;
+  const notes = document.getElementById('field-notes').value.trim();
+
+  if (!name) { showToast('El nombre es obligatorio.', 'error'); return; }
+  if (!planId) { showToast('Selecciona un plan.', 'error'); return; }
+
+  const payload = { full_name: name, phone: phone || null, email: email || null, plan_id: parseInt(planId), notes: notes || null };
+
+  let error;
+  if (id) {
+    ({ error } = await supabaseClient.from('members').update(payload).eq('id', id));
+  } else {
+    ({ error } = await supabaseClient.from('members').insert(payload));
+  }
+
+  if (error) {
+    showToast('Error al guardar. Intenta de nuevo.', 'error');
+  } else {
+    showToast(id ? 'Socio actualizado.' : 'Socio registrado correctamente.');
+    closeModal();
+    await loadMembers();
+  }
+}
+
+async function deleteMember(id, name) {
+  showModal(
+    'ELIMINAR SOCIO',
+    `<p style="color:var(--text2);font-size:14px">¿Estás seguro que deseas eliminar a <strong style="color:var(--text)">${name}</strong>?<br><br>Esta acción eliminará también su historial de pagos y membresías. Es irreversible.</p>`,
+    async () => {
+      const { error } = await supabaseClient.from('members').update({ is_active: false }).eq('id', id);
+      if (error) {
+        showToast('Error al eliminar.', 'error');
+      } else {
+        showToast('Socio eliminado.');
+        await loadMembers();
+      }
+    }
+  );
+}
+
+function openPayment(memberId, memberName) {
+  window.location.href = `payments.html?member_id=${memberId}&member_name=${encodeURIComponent(memberName)}`;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configuración — GYM AESTHETICS FITNESS</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="js/styles.css">
+<style>
+  .settings-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .settings-nav {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: sticky;
+    top: 28px;
+  }
+
+  .settings-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--text2);
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    border-bottom: 1px solid var(--border);
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .settings-nav-item:last-child { border-bottom: none; }
+  .settings-nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .settings-nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(212,245,60,0.05); }
+
+  .settings-nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+
+  .settings-section { display: none; }
+  .settings-section.active { display: block; }
+
+  .settings-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+
+  .settings-card-header {
+    padding: 18px 24px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .settings-card-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 18px;
+    letter-spacing: 0.06em;
+    color: var(--text);
+  }
+
+  .settings-card-desc {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 2px;
+  }
+
+  .settings-card-body {
+    padding: 24px;
+  }
+
+  .plan-edit-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .plan-edit-row:last-child { border-bottom: none; }
+
+  .plan-name-tag {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 20px;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .user-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+
+  .user-row:last-child { border-bottom: none; }
+
+  .user-row-info { display: flex; align-items: center; gap: 12px; }
+
+  .user-row-avatar {
+    width: 38px; height: 38px;
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .user-row-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .user-row-email {
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  .role-tag {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+  }
+
+  .role-owner { color: var(--accent); background: rgba(212,245,60,0.08); }
+  .role-assistant { color: var(--text2); background: rgba(255,255,255,0.05); }
+
+  @media (max-width: 768px) {
+    .settings-layout { grid-template-columns: 1fr; }
+    .settings-nav { position: static; }
+    .plan-edit-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading-screen" class="loading-screen">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Cargando configuración...</div>
+</div>
+
+<div class="app-layout" id="app" style="display:none">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-sq">GA</div>
+      <div class="logo-info">
+        <div class="logo-name">Gym Aesthetics</div>
+        <div class="logo-sub">Fitness</div>
+      </div>
+    </div>
+    <nav class="nav-section">
+      <div class="nav-label">Principal</div>
+      <a href="dashboard.html" class="nav-link"><span class="nav-icon">◈</span><span>Dashboard</span></a>
+      <a href="members.html" class="nav-link"><span class="nav-icon">◉</span><span>Socios</span></a>
+      <a href="payments.html" class="nav-link"><span class="nav-icon">◎</span><span>Pagos</span></a>
+      <div class="nav-label">Administración</div>
+      <a href="reports.html" class="nav-link"><span class="nav-icon">▦</span><span>Reportes</span></a>
+      <a href="settings.html" class="nav-link active"><span class="nav-icon">◧</span><span>Configuración</span></a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-card">
+        <div class="user-avatar" id="user-avatar">??</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name">...</div>
+          <div class="user-role-badge" id="user-role">...</div>
+        </div>
+        <button class="btn-logout" onclick="logout()" title="Cerrar sesión">⏻</button>
+      </div>
+    </div>
+  </aside>
+
+  <header class="app-header">
+    <div class="page-title">CONFIGURACIÓN</div>
+  </header>
+
+  <main class="app-main">
+    <div class="settings-layout">
+
+      <!-- Settings Nav -->
+      <div class="settings-nav">
+        <div class="settings-nav-item active" data-section="gym">
+          <span class="settings-nav-icon">◈</span> Gimnasio
+        </div>
+        <div class="settings-nav-item" data-section="plans">
+          <span class="settings-nav-icon">◎</span> Planes y precios
+        </div>
+        <div class="settings-nav-item" data-section="users">
+          <span class="settings-nav-icon">◉</span> Usuarios
+        </div>
+        <div class="settings-nav-item" data-section="security">
+          <span class="settings-nav-icon">◧</span> Seguridad
+        </div>
+      </div>
+
+      <!-- Settings Content -->
+      <div>
+
+        <!-- GYM SECTION -->
+        <div class="settings-section active" id="section-gym">
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <div class="settings-card-title">Datos del Gimnasio</div>
+              <div class="settings-card-desc">Información general que aparece en el sistema y notificaciones</div>
+            </div>
+            <div class="settings-card-body">
+              <div class="form-grid">
+                <div class="field">
+                  <label>Nombre del gimnasio</label>
+                  <input type="text" id="cfg-gym-name" placeholder="Ej: GYM AESTHETICS FITNESS">
+                </div>
+                <div class="field">
+                  <label>Email del dueño</label>
+                  <input type="email" id="cfg-owner-email" placeholder="correo@ejemplo.com">
+                </div>
+                <div class="field">
+                  <label>Moneda</label>
+                  <select id="cfg-currency">
+                    <option value="Bs">Bs (Bolivianos)</option>
+                    <option value="USD">USD (Dólares)</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Días de alerta (antes del vencimiento)</label>
+                  <input type="number" id="cfg-alert-days" min="1" max="30" placeholder="7">
+                </div>
+              </div>
+              <div style="margin-top:20px">
+                <button class="btn btn-accent" id="btn-save-gym">Guardar cambios</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PLANS SECTION -->
+        <div class="settings-section" id="section-plans">
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <div class="settings-card-title">Planes y Precios</div>
+              <div class="settings-card-desc">Edita el precio de cada plan. Los cambios aplican para nuevos pagos.</div>
+            </div>
+            <div class="settings-card-body">
+              <div id="plans-list">
+                <div style="color:var(--text3);font-size:13px">Cargando planes...</div>
+              </div>
+              <div style="margin-top:20px">
+                <button class="btn btn-accent" id="btn-save-plans">Guardar precios</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- USERS SECTION -->
+        <div class="settings-section" id="section-users">
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <div class="settings-card-title">Usuarios del Sistema</div>
+              <div class="settings-card-desc">Gestiona el acceso de asistentes al sistema</div>
+            </div>
+            <div class="settings-card-body">
+              <div id="users-list">
+                <div style="color:var(--text3);font-size:13px">Cargando usuarios...</div>
+              </div>
+              <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+                <button class="btn btn-accent" id="btn-new-user">+ Crear asistente</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECURITY SECTION -->
+        <div class="settings-section" id="section-security">
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <div class="settings-card-title">Cambiar Contraseña</div>
+              <div class="settings-card-desc">Actualiza la contraseña de tu cuenta</div>
+            </div>
+            <div class="settings-card-body">
+              <div class="form-grid">
+                <div class="field">
+                  <label>Nueva contraseña</label>
+                  <input type="password" id="cfg-new-password" placeholder="Mínimo 8 caracteres">
+                </div>
+                <div class="field">
+                  <label>Confirmar contraseña</label>
+                  <input type="password" id="cfg-confirm-password" placeholder="Repite la contraseña">
+                </div>
+              </div>
+              <div style="margin-top:20px">
+                <button class="btn btn-accent" id="btn-save-password">Actualizar contraseña</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL CREATE USER -->
+<div id="user-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>CREAR ASISTENTE</h3>
+      <button class="modal-close" onclick="document.getElementById('user-modal').style.display='none'">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field">
+          <label>Nombre completo *</label>
+          <input type="text" id="new-user-name" placeholder="Nombre del asistente">
+        </div>
+        <div class="field">
+          <label>Email *</label>
+          <input type="email" id="new-user-email" placeholder="correo@ejemplo.com">
+        </div>
+        <div class="field">
+          <label>Contraseña *</label>
+          <input type="password" id="new-user-password" placeholder="Mínimo 8 caracteres">
+        </div>
+        <div class="field">
+          <label>Rol</label>
+          <select id="new-user-role">
+            <option value="assistant">Asistente</option>
+            <option value="owner">Propietario</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('user-modal').style.display='none'">Cancelar</button>
+      <button class="btn btn-accent" id="btn-save-user">Crear Usuario</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+<script>
+let currentPlans = [];
+
+(async () => {
+  const session = await requireAuth();
+  if (!session) return;
+  const profile = await requireOwner();
+  if (!profile) return;
+  await setupNav();
+
+  const name = document.getElementById('user-name').textContent;
+  const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+  document.getElementById('user-avatar').textContent = initials;
+
+  await loadGymSettings();
+  await loadPlans();
+  await loadUsers();
+
+  // Nav tabs
+  document.querySelectorAll('.settings-nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.settings-nav-item').forEach(i => i.classList.remove('active'));
+      document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+      item.classList.add('active');
+      document.getElementById('section-' + item.dataset.section).classList.add('active');
+    });
+  });
+
+  document.getElementById('btn-save-gym').addEventListener('click', saveGymSettings);
+  document.getElementById('btn-save-plans').addEventListener('click', savePlans);
+  document.getElementById('btn-save-password').addEventListener('click', savePassword);
+  document.getElementById('btn-new-user').addEventListener('click', () => {
+    document.getElementById('user-modal').style.display = 'flex';
+  });
+  document.getElementById('btn-save-user').addEventListener('click', createUser);
+
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'grid';
+})();
+
+async function loadGymSettings() {
+  const s = await getSettings();
+  if (!s) return;
+  document.getElementById('cfg-gym-name').value = s.gym_name || '';
+  document.getElementById('cfg-owner-email').value = s.owner_email || '';
+  document.getElementById('cfg-currency').value = s.currency || 'Bs';
+  document.getElementById('cfg-alert-days').value = s.alert_days || 7;
+}
+
+async function saveGymSettings() {
+  const gymName = document.getElementById('cfg-gym-name').value.trim();
+  const ownerEmail = document.getElementById('cfg-owner-email').value.trim();
+  const currency = document.getElementById('cfg-currency').value;
+  const alertDays = parseInt(document.getElementById('cfg-alert-days').value) || 7;
+
+  if (!gymName) { showToast('El nombre del gimnasio es obligatorio.', 'error'); return; }
+
+  const { error } = await supabaseClient
+    .from('settings')
+    .update({ gym_name: gymName, owner_email: ownerEmail, currency, alert_days: alertDays, updated_at: new Date().toISOString() })
+    .eq('id', 1);
+
+  if (error) showToast('Error al guardar.', 'error');
+  else showToast('Configuración guardada.');
+}
+
+async function loadPlans() {
+  const { data } = await supabaseClient.from('plans').select('*').order('price');
+  currentPlans = data || [];
+  renderPlans();
+}
+
+function renderPlans() {
+  const container = document.getElementById('plans-list');
+  container.innerHTML = currentPlans.map(p => `
+    <div class="plan-edit-row">
+      <div>
+        <div class="plan-name-tag">${p.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${p.max_members} persona(s) · ${p.duration_days} días</div>
+      </div>
+      <div class="field">
+        <label>Precio (Bs)</label>
+        <input type="number" id="plan-price-${p.id}" value="${p.price}" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>Duración (días)</label>
+        <input type="number" id="plan-days-${p.id}" value="${p.duration_days}" min="1" max="365">
+      </div>
+      <div style="padding-bottom:2px">
+        <span class="badge ${p.is_active ? 'green' : 'red'}">
+          <span class="badge-dot"></span>${p.is_active ? 'Activo' : 'Inactivo'}
+        </span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function savePlans() {
+  for (const p of currentPlans) {
+    const price = parseFloat(document.getElementById(`plan-price-${p.id}`).value);
+    const days = parseInt(document.getElementById(`plan-days-${p.id}`).value);
+    await supabaseClient.from('plans').update({ price, duration_days: days }).eq('id', p.id);
+  }
+  showToast('Planes actualizados correctamente.');
+  await loadPlans();
+}
+
+async function loadUsers() {
+  const { data } = await supabaseClient.from('profiles').select('*').order('role');
+  const container = document.getElementById('users-list');
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div style="color:var(--text3);font-size:13px">Sin usuarios registrados.</div>';
+    return;
+  }
+  container.innerHTML = data.map(u => {
+    const initials = u.full_name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+    const isOwner = u.role === 'owner';
+    return `
+      <div class="user-row">
+        <div class="user-row-info">
+          <div class="user-row-avatar">${initials}</div>
+          <div>
+            <div class="user-row-name">${u.full_name}</div>
+            <div class="user-row-email">${isOwner ? 'Propietario' : 'Asistente'}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="role-tag ${isOwner ? 'role-owner' : 'role-assistant'}">${isOwner ? 'Owner' : 'Asistente'}</span>
+          ${!isOwner ? `<button class="btn btn-danger btn-sm" onclick="deactivateUser('${u.id}', '${u.full_name}')">Eliminar</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function createUser() {
+  const name = document.getElementById('new-user-name').value.trim();
+  const email = document.getElementById('new-user-email').value.trim();
+  const password = document.getElementById('new-user-password').value;
+  const role = document.getElementById('new-user-role').value;
+
+  if (!name || !email || !password) { showToast('Completa todos los campos.', 'error'); return; }
+  if (password.length < 8) { showToast('La contraseña debe tener al menos 8 caracteres.', 'error'); return; }
+
+  const session = await getSession();
+  const { data, error } = await supabaseClient.functions.invoke('create-user', {
+    body: { email, password, full_name: name, role },
+    headers: { Authorization: `Bearer ${session.access_token}` }
+  });
+
+  if (error || data?.error) {
+    showToast('Error al crear usuario. Verifica la Edge Function.', 'error');
+  } else {
+    showToast(`Usuario ${name} creado correctamente.`);
+    document.getElementById('user-modal').style.display = 'none';
+    await loadUsers();
+  }
+}
+
+async function deactivateUser(id, name) {
+  showModal(
+    'ELIMINAR USUARIO',
+    `<p style="color:var(--text2);font-size:14px">¿Eliminar acceso de <strong style="color:var(--text)">${name}</strong>?<br><br>El usuario ya no podrá ingresar al sistema.</p>`,
+    async () => {
+      await supabaseClient.functions.invoke('delete-user', { body: { userId: id } });
+      showToast('Usuario eliminado.');
+      await loadUsers();
+    }
+  );
+}
+
+async function savePassword() {
+  const newPass = document.getElementById('cfg-new-password').value;
+  const confirmPass = document.getElementById('cfg-confirm-password').value;
+
+  if (!newPass || newPass.length < 8) { showToast('La contraseña debe tener al menos 8 caracteres.', 'error'); return; }
+  if (newPass !== confirmPass) { showToast('Las contraseñas no coinciden.', 'error'); return; }
+
+  const { error } = await supabaseClient.auth.updateUser({ password: newPass });
+  if (error) showToast('Error al cambiar contraseña.', 'error');
+  else {
+    showToast('Contraseña actualizada correctamente.');
+    document.getElementById('cfg-new-password').value = '';
+    document.getElementById('cfg-confirm-password').value = '';
+  }
+}
+</script>
+</body>
+</html>
